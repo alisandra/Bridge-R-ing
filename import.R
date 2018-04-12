@@ -1,0 +1,31 @@
+library(readxl)
+library(gdata)
+
+read_sheet <- function(filename, sheet, comment.char='#', strip_quotes=TRUE, ...){
+  if (! strip_quotes){
+    out <- read.xls(filename=filename, sheet=sheet, comment.char=comment.char, ...)
+  }else{
+    out <- tryCatch({
+      f <- xls2tab(filename, sheet=sheet)
+      raw <- readLines(f)
+      raw <- gsub("\\\"", "", raw)
+      return(read.delim(text=raw, comment.char=comment.char, ...))
+    }, warning = function(w) {
+    }, error = function(e) {
+      return(data.frame())
+    }, finally = {
+      summary_f <- summary(f)
+      close(f)
+      file.remove(summary_f$description)
+    })
+  }
+  # todo, cleanup, for instance of columns that are entirely NA (and unnamed) 
+  return(out)
+}
+
+read_all_sheets <- function(filename, comment.char='#', strip_quotes=TRUE, ...){
+  sheet_names <- excel_sheets(filename)
+  sheet_list <- lapply(sheet_names, function(s) read_sheet(filename,s, comment.char=comment.char, ...))
+  names(sheet_list) <- sheet_names 
+  return(sheet_list)
+}
